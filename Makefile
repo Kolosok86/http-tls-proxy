@@ -12,11 +12,11 @@ docker-run:
 
 .PHONY: run
 run:
-	${GO} run ./cmd
+	${GO} run ./cmd/
 
 .PHONY: build
 build:
-	${GO} build ./cmd
+	${GO} build -o proxy ./cmd/
 
 .PHONY: clean
 clean:

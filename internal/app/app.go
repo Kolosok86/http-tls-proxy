@@ -4,31 +4,30 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	nhttp "net/http"
+	"net/http"
 	"strings"
 
-	http "github.com/Danny-Dasilva/fhttp"
 	"github.com/kolosok86/proxy/internal/core"
 	"github.com/quotpw/tlsHttpClient/tlsHttpClient"
 )
 
-func HandleReq(w nhttp.ResponseWriter, r *nhttp.Request) {
+func HandleReq(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	if r.Method != nhttp.MethodPost {
-		nhttp.Error(w, "Method not allowed", nhttp.StatusMethodNotAllowed)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	request := &core.RequestParams{}
 	err := json.NewDecoder(r.Body).Decode(request)
 	if err != nil {
-		nhttp.Error(w, err.Error(), nhttp.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if request.URL == "" {
-		nhttp.Error(w, "Set url first", nhttp.StatusBadRequest)
+		http.Error(w, "Set url first", http.StatusBadRequest)
 		return
 	}
 
@@ -38,7 +37,7 @@ func HandleReq(w nhttp.ResponseWriter, r *nhttp.Request) {
 	executor := client.R()
 
 	if request.Proxy != "" && setProxy(client, request.Proxy) != nil {
-		nhttp.Error(w, err.Error(), nhttp.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -67,7 +66,7 @@ func HandleReq(w nhttp.ResponseWriter, r *nhttp.Request) {
 
 	executor.Method = strings.ToUpper(request.Method)
 	if request.Method == "" {
-		executor.Method = nhttp.MethodGet
+		executor.Method = http.MethodGet
 	}
 
 	if checkMethods(request.Method) && request.Body != "" {
@@ -88,7 +87,7 @@ func HandleReq(w nhttp.ResponseWriter, r *nhttp.Request) {
 
 	response, err := executor.Send()
 	if err != nil {
-		nhttp.Error(w, err.Error(), nhttp.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -97,7 +96,7 @@ func HandleReq(w nhttp.ResponseWriter, r *nhttp.Request) {
 
 	err = json.NewEncoder(w).Encode(&response)
 	if err != nil {
-		nhttp.Error(w, err.Error(), nhttp.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 }
@@ -116,5 +115,5 @@ func setProxy(client *tlsHttpClient.Client, url string) error {
 }
 
 func checkMethods(method string) bool {
-	return method == nhttp.MethodPost || method == nhttp.MethodPut || method == nhttp.MethodPatch
+	return method == http.MethodPost || method == http.MethodPut || method == http.MethodPatch
 }
