@@ -13,7 +13,3 @@ COPY --from=build /usr/src/proxy/proxy /usr/bin/proxy
 EXPOSE 4000
 
 CMD [ "/usr/bin/proxy" ]
-
-LABEL org.opencontainers.image.title "tls http server"
-LABEL org.opencontainers.image.description "Goland http tls server"
-LABEL org.opencontainers.image.licenses "ISC"
