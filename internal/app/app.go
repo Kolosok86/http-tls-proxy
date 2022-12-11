@@ -31,7 +31,7 @@ func HandleReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("Receive request to url %s:\n", request.URL)
+	fmt.Printf("Receive request to url %s\n", request.URL)
 
 	client := tlsHttpClient.New()
 	executor := client.R()
@@ -93,6 +93,8 @@ func HandleReq(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+
+	fmt.Printf("Response from %s recieved successfully\n", request.URL)
 
 	err = json.NewEncoder(w).Encode(&response)
 	if err != nil {
