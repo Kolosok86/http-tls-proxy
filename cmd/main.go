@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/kolosok86/proxy/internal/app"
 )
@@ -24,7 +25,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	http.HandleFunc("/api/request", app.HandleReq)
 
-	fmt.Println("Server started and listening on port", *addr)
+	fmt.Println("Server started and listening on port", strings.Replace(*addr, ":", "", 1))
 
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
