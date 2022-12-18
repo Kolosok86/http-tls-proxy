@@ -94,7 +94,7 @@ func HandleReq(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	fmt.Printf("Response from %s recieved successfully\n", request.URL)
+	fmt.Printf("Response from %s received successfully\n", request.URL)
 
 	err = json.NewEncoder(w).Encode(&response)
 	if err != nil {
