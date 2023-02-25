@@ -34,7 +34,6 @@ func HandleReq(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Receive request to url %s\n", request.URL)
 
 	client := tlsHttpClient.New()
-	executor := client.R()
 
 	if request.Proxy != "" && setProxy(client, request.Proxy) != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -62,7 +61,7 @@ func HandleReq(w http.ResponseWriter, r *http.Request) {
 		client.SetJA3(request.Ja3)
 	}
 
-	executor.URL = request.URL
+	executor := client.R()
 
 	executor.Method = strings.ToUpper(request.Method)
 	if request.Method == "" {
@@ -84,6 +83,8 @@ func HandleReq(w http.ResponseWriter, r *http.Request) {
 	if checkMethods(request.Method) && request.Form != nil {
 		executor.SetFormData(request.Form)
 	}
+
+	executor.URL = request.URL
 
 	response, err := executor.Send()
 	if err != nil {
