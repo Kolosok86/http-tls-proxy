@@ -1,122 +1,111 @@
 package app
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
 	"strings"
+	"time"
 
+	"github.com/Kolosok86/http"
+	"github.com/Kolosok86/http/httputil"
 	"github.com/kolosok86/proxy/internal/core"
-	"github.com/quotpw/tlsHttpClient/tlsHttpClient"
 )
 
-func HandleReq(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
+const BAD_REQ_MSG = "Bad Request\n"
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+type ProxyHandler struct {
+	timeout   time.Duration
+	logger    *core.Logger
+	transport http.RoundTripper
+}
 
-	request := &core.RequestParams{}
-	err := json.NewDecoder(r.Body).Decode(request)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if request.URL == "" {
-		http.Error(w, "Set url first", http.StatusBadRequest)
-		return
-	}
-
-	fmt.Printf("Receive request to url %s\n", request.URL)
-
-	client := tlsHttpClient.New()
-
-	if request.Proxy != "" && setProxy(client, request.Proxy) != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	client.SetDisableRedirect(request.DisableRedirect)
-	if request.Headers != nil {
-		client.SetHeaders(request.Headers)
-	}
-
-	if request.UserAgent != "" {
-		client.SetHeader("User-Agent", request.UserAgent)
-	}
-
-	if request.Params != nil {
-		client.SetQueryParams(request.Params)
-	}
-
-	if request.Timeout != 0 {
-		client.Timeout = request.Timeout
-	}
-
-	if request.Ja3 != "" {
-		client.SetJA3(request.Ja3)
-	}
-
-	executor := client.R()
-
-	executor.Method = strings.ToUpper(request.Method)
-	if request.Method == "" {
-		executor.Method = http.MethodGet
-	}
-
-	if checkMethods(request.Method) && request.Body != "" {
-		executor.SetBody(request.Body)
-	}
-
-	if checkMethods(request.Method) && request.Multipart != nil {
-		executor.SetMultipartFormData(request.Multipart)
-	}
-
-	if checkMethods(request.Method) && request.Json != nil {
-		executor.SetJsonData(request.Json)
-	}
-
-	if checkMethods(request.Method) && request.Form != nil {
-		executor.SetFormData(request.Form)
-	}
-
-	executor.URL = request.URL
-
-	response, err := executor.Send()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	fmt.Printf("Response from %s received successfully\n", request.URL)
-
-	err = json.NewEncoder(w).Encode(&response)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+func NewProxyHandler(timeout time.Duration, logger *core.Logger) *ProxyHandler {
+	return &ProxyHandler{
+		transport: &http.Transport{},
+		timeout:   timeout,
+		logger:    logger,
 	}
 }
 
-func setProxy(client *tlsHttpClient.Client, url string) error {
-	proxy := tlsHttpClient.StringToProxy(url, "http")
-	if proxy == nil {
-		return errors.New("proxy is nil")
+func (s *ProxyHandler) ServeHTTP(wr http.ResponseWriter, req *http.Request) {
+	isConnect := strings.ToUpper(req.Method) == "CONNECT"
+	if (req.URL.Host == "" || req.URL.Scheme == "" && !isConnect) && req.ProtoMajor < 2 ||
+		req.Host == "" && req.ProtoMajor == 2 {
+		http.Error(wr, BAD_REQ_MSG, http.StatusBadRequest)
+		return
 	}
 
-	if err := client.SetProxy(proxy); err != nil {
-		return err
-	}
+	s.logger.Info("Request: %v %v %v %v", req.RemoteAddr, req.Proto, req.Method, req.URL)
 
-	return nil
+	if !isConnect {
+		http.Error(wr, BAD_REQ_MSG, http.StatusBadRequest)
+	} else {
+		s.HandleTunnel(wr, req)
+	}
 }
 
-func checkMethods(method string) bool {
-	return method == http.MethodPost || method == http.MethodPut || method == http.MethodPatch
+func (s *ProxyHandler) HandleTunnel(wr http.ResponseWriter, req *http.Request) {
+	if req.ProtoMajor == 2 {
+		s.logger.Error("Unsupported protocol version: %s", req.Proto)
+		http.Error(wr, "Unsupported protocol version.", http.StatusBadRequest)
+		return
+	}
+
+	// Upgrade client connection
+	local, reader, err := core.Hijack(wr)
+	if err != nil {
+		s.logger.Error("Can't hijack client connection: %v", err)
+		http.Error(wr, "Can't hijack client connection", http.StatusInternalServerError)
+		return
+	}
+
+	defer local.Close()
+
+	// Inform client connection is built
+	fmt.Fprintf(local, "HTTP/%d.%d 200 OK\r\n\r\n", req.ProtoMajor, req.ProtoMinor)
+
+	request, err := core.ReadRequest(reader.Reader, "http")
+	if err != nil {
+		s.logger.Error("HTTP read error: %v", err)
+		http.Error(wr, "Server Read Error", http.StatusInternalServerError)
+		return
+	}
+
+	scheme := request.Header.Get("proxy-protocol")
+	if scheme != "http" && scheme != "https" {
+		scheme = "https"
+	}
+
+	hash := request.Header.Get("proxy-tls")
+	request.URL.Scheme = scheme
+
+	client := &http.Client{
+		Transport: core.NewRoundTripper(hash, "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:87.0) Gecko/20100101 Firefox/87.0"),
+		Timeout:   10 * time.Second,
+	}
+
+	core.RemoveServiceHeaders(request)
+
+	resp, err := client.Do(request)
+	if err != nil {
+		s.logger.Error("HTTP fetch error: %v", err)
+		http.Error(wr, "Server Request Error", http.StatusInternalServerError)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	s.logger.Info("%v %v %v %v", req.RemoteAddr, req.Method, req.URL, resp.Status)
+
+	raw, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		s.logger.Error("HTTP dump error: %v", err)
+		http.Error(wr, "Server Dump Error", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = fmt.Fprintf(local, "%s", raw)
+	if err != nil {
+		s.logger.Error("HTTP dump error: %v", err)
+		http.Error(wr, "Server Send Response Error", http.StatusInternalServerError)
+	}
 }
