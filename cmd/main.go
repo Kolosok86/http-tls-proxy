@@ -21,7 +21,7 @@ func main() {
 	if port, exists := os.LookupEnv("PORT"); exists {
 		addr = flag.String("addr", ":"+port, usageMsg)
 	} else {
-		addr = flag.String("addr", ":4000", usageMsg)
+		addr = flag.String("addr", ":3128", usageMsg)
 	}
 
 	logWriter := core.NewLogWriter(os.Stderr)

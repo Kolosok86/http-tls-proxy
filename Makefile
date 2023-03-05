@@ -8,7 +8,7 @@ docker-build:
 
 .PHONY: docker-run
 docker-run:
-	docker run -d --restart always --net internal --publish 4000:4000 --name proxy proxy
+	docker run -d --restart always --net internal --publish 3128:3128 --name proxy proxy
 
 .PHONY: run
 run:

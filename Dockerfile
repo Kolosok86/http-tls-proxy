@@ -10,6 +10,6 @@ RUN CGO_ENABLED=0 go build -o proxy ./cmd/
 FROM gcr.io/distroless/static-debian11:nonroot
 COPY --from=build /usr/src/proxy/proxy /usr/bin/proxy
 
-EXPOSE 4000
+EXPOSE 3128
 
 CMD [ "/usr/bin/proxy" ]
