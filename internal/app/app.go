@@ -76,10 +76,12 @@ func (s *ProxyHandler) HandleTunnel(wr http.ResponseWriter, req *http.Request) {
 	}
 
 	hash := request.Header.Get("proxy-tls")
+	agent := request.UserAgent()
+
 	request.URL.Scheme = scheme
 
 	client := &http.Client{
-		Transport: core.NewRoundTripper(hash, "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:87.0) Gecko/20100101 Firefox/87.0"),
+		Transport: core.NewRoundTripper(hash, agent),
 		Timeout:   10 * time.Second,
 	}
 

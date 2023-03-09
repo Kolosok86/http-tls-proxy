@@ -78,9 +78,10 @@ func StringToSpec(ja3 string, userAgent string) (*utls.ClientHelloSpec, error) {
 	if len(pointFormats) == 1 && pointFormats[0] == "" {
 		pointFormats = []string{}
 	}
+
 	// Parse Curves
 	var targetCurves []utls.CurveID
-	targetCurves = append(targetCurves, utls.CurveID(utls.GREASE_PLACEHOLDER)) //append grease for Chrome browsers
+	targetCurves = append(targetCurves, utls.CurveID(utls.GREASE_PLACEHOLDER))
 	for _, c := range curves {
 		cid, err := strconv.ParseUint(c, 10, 16)
 		if err != nil {
@@ -88,9 +89,6 @@ func StringToSpec(ja3 string, userAgent string) (*utls.ClientHelloSpec, error) {
 		}
 
 		targetCurves = append(targetCurves, utls.CurveID(cid))
-		// if cid != uint64(utls.CurveP521) {
-		// CurveP521 sometimes causes handshake errors
-		// }
 	}
 
 	extMap["10"] = &utls.SupportedCurvesExtension{Curves: targetCurves}
@@ -146,7 +144,7 @@ func StringToSpec(ja3 string, userAgent string) (*utls.ClientHelloSpec, error) {
 
 	return &utls.ClientHelloSpec{
 		CipherSuites:       suites,
-		CompressionMethods: []byte{0},
+		CompressionMethods: []byte{0x00},
 		Extensions:         exts,
 		GetSessionID:       sha256.Sum256,
 	}, nil
@@ -159,51 +157,38 @@ func genMap() (extMap map[string]utls.TLSExtension) {
 		"13": &utls.SignatureAlgorithmsExtension{
 			SupportedSignatureAlgorithms: []utls.SignatureScheme{
 				utls.ECDSAWithP256AndSHA256,
-				utls.ECDSAWithP384AndSHA384,
-				utls.ECDSAWithP521AndSHA512,
 				utls.PSSWithSHA256,
-				utls.PSSWithSHA384,
-				utls.PSSWithSHA512,
 				utls.PKCS1WithSHA256,
+				utls.ECDSAWithP384AndSHA384,
+				utls.PSSWithSHA384,
 				utls.PKCS1WithSHA384,
+				utls.PSSWithSHA512,
 				utls.PKCS1WithSHA512,
-				utls.ECDSAWithSHA1,
-				utls.PKCS1WithSHA1,
 			},
 		},
 		"16": &utls.ALPNExtension{
-			AlpnProtocols: []string{"http/1.1"},
+			AlpnProtocols: []string{"h2", "http/1.1"},
 		},
-		"17": &utls.GenericExtension{Id: 17}, // status_request_v2
 		"18": &utls.SCTExtension{},
 		"21": &utls.UtlsPaddingExtension{GetPaddingLen: utls.BoringPaddingStyle},
-		"22": &utls.GenericExtension{Id: 22}, // encrypt_then_mac
 		"23": &utls.UtlsExtendedMasterSecretExtension{},
-		"28": &utls.FakeRecordSizeLimitExtension{},
 		"27": &utls.UtlsCompressCertExtension{
 			Algorithms: []utls.CertCompressionAlgo{utls.CertCompressionBrotli},
 		},
 		"35": &utls.SessionTicketExtension{},
-		"34": &utls.GenericExtension{Id: 34},
 		"41": &utls.GenericExtension{Id: 41},
 		"43": &utls.SupportedVersionsExtension{Versions: []uint16{
 			utls.GREASE_PLACEHOLDER,
 			utls.VersionTLS13,
 			utls.VersionTLS12,
-			utls.VersionTLS11,
-			utls.VersionTLS10,
 		}},
-		"44": &utls.CookieExtension{},
 		"45": &utls.PSKKeyExchangeModesExtension{Modes: []uint8{
 			utls.PskModeDHE,
 		}},
-		"49": &utls.GenericExtension{Id: 49},
-		"50": &utls.GenericExtension{Id: 50},
 		"51": &utls.KeyShareExtension{KeyShares: []utls.KeyShare{
 			{Group: utls.CurveID(utls.GREASE_PLACEHOLDER), Data: []byte{0}},
 			{Group: utls.X25519},
 		}},
-		"30032": &utls.GenericExtension{Id: 0x7550, Data: []byte{0}},
 		"13172": &utls.NPNExtension{},
 		"17513": &utls.ApplicationSettingsExtension{
 			SupportedProtocols: []string{

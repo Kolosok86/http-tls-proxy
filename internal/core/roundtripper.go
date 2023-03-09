@@ -56,7 +56,7 @@ func (rt *roundTripper) getTransport(req *http.Request, addr string) error {
 	case errProtocolNegotiated:
 	case nil:
 		// Should never happen.
-		panic("dialTLS returned no error when determining cachedTransports")
+		panic("dialTLS returned no error when determining cached transports")
 	default:
 		return err
 	}
@@ -85,26 +85,26 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 		host = addr
 	}
 
-	spec, err := StringToSpec(rt.JA3, rt.UserAgent)
-	if err != nil {
-		return nil, err
+	helloAgent := utls.HelloChrome_106_Shuffle
+	if rt.JA3 != "" {
+		helloAgent = utls.HelloCustom
 	}
 
 	conn := utls.UClient(rawConn, &utls.Config{
 		InsecureSkipVerify: true,
 		ServerName:         host,
 	},
-		utls.HelloCustom,
+		helloAgent,
 	)
 
-	if err := conn.ApplyPreset(spec); err != nil {
+	if err = rt.setSpec(conn); err != nil {
 		return nil, err
 	}
 
 	if err = conn.Handshake(); err != nil {
 		_ = conn.Close()
 
-		if err.Error() == "tls: CurvePreferences includes unsupported curve" {
+		if err.Error() == "tls: curve preferences includes unsupported curve" {
 			return nil, fmt.Errorf("conn.Handshake() error for tls 1.3 (please retry request): %+v", err)
 		}
 
@@ -131,6 +131,23 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 	rt.connections[addr] = conn
 
 	return nil, errProtocolNegotiated
+}
+
+func (rt *roundTripper) setSpec(conn *utls.UConn) error {
+	if rt.JA3 == "" {
+		return nil
+	}
+
+	spec, err := StringToSpec(rt.JA3, rt.UserAgent)
+	if err != nil {
+		return err
+	}
+
+	if err = conn.ApplyPreset(spec); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (rt *roundTripper) dialTLSHTTP2(network, addr string, _ *utls.Config) (net.Conn, error) {
