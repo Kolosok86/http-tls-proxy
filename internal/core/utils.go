@@ -209,7 +209,7 @@ func RemoveServiceHeaders(req *http.Request) {
 			continue
 		}
 
+		req.HeaderOrder.Del(key)
 		req.Header.Del(key)
-		req.Order.Del(key)
 	}
 }
