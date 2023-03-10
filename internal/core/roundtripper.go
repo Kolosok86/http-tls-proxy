@@ -22,6 +22,7 @@ type roundTripper struct {
 
 	JA3       string
 	UserAgent string
+	Downgrade bool
 
 	connections map[string]net.Conn
 	transports  map[string]http.RoundTripper
@@ -116,12 +117,11 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 	}
 
 	// No http.Transport constructed yet, create one based on the results of ALPN.
-	switch conn.ConnectionState().NegotiatedProtocol {
-	case http2.NextProtoTLS:
+	if conn.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS && !rt.Downgrade {
 		rt.transports[addr] = &http2.Transport{
 			DialTLS: rt.dialTLSHTTP2,
 		}
-	default:
+	} else {
 		// Assume the remote peer is speaking HTTP 1.x + TLS.
 		rt.transports[addr] = &http.Transport{DialTLSContext: rt.dialTLS}
 	}
@@ -163,12 +163,14 @@ func (rt *roundTripper) getDialTLSAddr(req *http.Request) string {
 	return net.JoinHostPort(req.URL.Host, "443")
 }
 
-func NewRoundTripper(JA3, UserAgent string) http.RoundTripper {
+func NewRoundTripper(JA3, UserAgent string, downgrade bool) http.RoundTripper {
 	return &roundTripper{
 		dialer: proxy.Direct,
 
-		JA3:         JA3,
-		UserAgent:   UserAgent,
+		JA3:       JA3,
+		UserAgent: UserAgent,
+		Downgrade: downgrade,
+
 		transports:  make(map[string]http.RoundTripper),
 		connections: make(map[string]net.Conn),
 	}

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Kolosok86/http"
-	"github.com/Kolosok86/http/httputil"
 	"github.com/kolosok86/proxy/internal/core"
 )
 
@@ -71,17 +70,18 @@ func (s *ProxyHandler) HandleTunnel(wr http.ResponseWriter, req *http.Request) {
 	}
 
 	scheme := request.Header.Get("proxy-protocol")
+	downgrade := request.Header.Get("proxy-downgrade") != ""
+	hash := request.Header.Get("proxy-tls")
+
 	if scheme != "http" && scheme != "https" {
 		scheme = "https"
 	}
 
-	hash := request.Header.Get("proxy-tls")
 	agent := request.UserAgent()
-
 	request.URL.Scheme = scheme
 
 	client := &http.Client{
-		Transport: core.NewRoundTripper(hash, agent),
+		Transport: core.NewRoundTripper(hash, agent, downgrade),
 		Timeout:   10 * time.Second,
 	}
 
@@ -98,16 +98,9 @@ func (s *ProxyHandler) HandleTunnel(wr http.ResponseWriter, req *http.Request) {
 
 	s.logger.Info("%v %v %v %v", req.RemoteAddr, req.Method, req.URL, resp.Status)
 
-	raw, err := httputil.DumpResponse(resp, true)
+	err = resp.Write(local)
 	if err != nil {
 		s.logger.Error("HTTP dump error: %v", err)
-		http.Error(wr, "Server Dump Error", http.StatusInternalServerError)
-		return
-	}
-
-	_, err = fmt.Fprintf(local, "%s", raw)
-	if err != nil {
-		s.logger.Error("HTTP dump error: %v", err)
-		http.Error(wr, "Server Send Response Error", http.StatusInternalServerError)
+		http.Error(wr, "Received Bad Response", http.StatusInternalServerError)
 	}
 }

@@ -20,6 +20,7 @@ const (
 
 var blacklist = []string{
 	"proxy-protocol",
+	"proxy-downgrade",
 	"proxy-tls",
 }
 
