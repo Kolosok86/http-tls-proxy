@@ -120,6 +120,11 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 	if conn.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS && !rt.Downgrade {
 		rt.transports[addr] = &http2.Transport{
 			DialTLS: rt.dialTLSHTTP2,
+
+			// set chrome initial params
+			HeaderTableSize:      65536,
+			InitialWindowSize:    6291456,
+			InitMaxReadFrameSize: 262144,
 		}
 	} else {
 		// Assume the remote peer is speaking HTTP 1.x + TLS.
