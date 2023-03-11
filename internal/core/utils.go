@@ -63,9 +63,9 @@ func ReadRequest(reader *bufio.Reader, scheme string) (*http.Request, error) {
 	return r, nil
 }
 
-func StringToSpec(ja3 string, userAgent string) (*utls.ClientHelloSpec, error) {
+func StringToSpec(ja3 string, userAgent string, proto []string) (*utls.ClientHelloSpec, error) {
 	parsedUserAgent := parseUserAgent(userAgent)
-	extMap := genMap()
+	extMap := genMap(proto)
 	tokens := strings.Split(ja3, ",")
 
 	ciphers := strings.Split(tokens[1], "-")
@@ -151,7 +151,7 @@ func StringToSpec(ja3 string, userAgent string) (*utls.ClientHelloSpec, error) {
 	}, nil
 }
 
-func genMap() (extMap map[string]utls.TLSExtension) {
+func genMap(proto []string) (extMap map[string]utls.TLSExtension) {
 	extMap = map[string]utls.TLSExtension{
 		"0": &utls.SNIExtension{},
 		"5": &utls.StatusRequestExtension{},
@@ -168,7 +168,7 @@ func genMap() (extMap map[string]utls.TLSExtension) {
 			},
 		},
 		"16": &utls.ALPNExtension{
-			AlpnProtocols: []string{"h2", "http/1.1"},
+			AlpnProtocols: proto,
 		},
 		"18": &utls.SCTExtension{},
 		"21": &utls.UtlsPaddingExtension{GetPaddingLen: utls.BoringPaddingStyle},

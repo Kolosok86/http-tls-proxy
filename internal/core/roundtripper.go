@@ -117,7 +117,7 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 	}
 
 	// No http.Transport constructed yet, create one based on the results of ALPN.
-	if conn.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS && !rt.Downgrade {
+	if conn.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS {
 		rt.transports[addr] = &http2.Transport{
 			DialTLS: rt.dialTLSHTTP2,
 
@@ -143,7 +143,12 @@ func (rt *roundTripper) setSpec(conn *utls.UConn) error {
 		return nil
 	}
 
-	spec, err := StringToSpec(rt.JA3, rt.UserAgent)
+	proto := []string{"h2", "http/1.1"}
+	if rt.Downgrade {
+		proto = proto[1:]
+	}
+
+	spec, err := StringToSpec(rt.JA3, rt.UserAgent, proto)
 	if err != nil {
 		return err
 	}

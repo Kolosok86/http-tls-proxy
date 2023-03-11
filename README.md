@@ -13,7 +13,7 @@
 ### Add headers to your request 
 - `proxy-tls` with ja3 token for change your tls 
 - `proxy-protocol` with `http` or `https` parameter 
-- `proxy-downgrade` use http1.1 for request
+- `proxy-downgrade` use http/1.1 for request
 
 > default is chrome browser tls, https protocol and http2 / http
 
