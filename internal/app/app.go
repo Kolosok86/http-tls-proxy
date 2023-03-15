@@ -69,8 +69,11 @@ func (s *ProxyHandler) HandleTunnel(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// get all header - settings
 	scheme := request.Header.Get("proxy-protocol")
 	downgrade := request.Header.Get("proxy-downgrade") != ""
+	node := request.Header.Get("proxy-node-escape")
+	setup := request.Header.Get("proxy-tls-setup")
 	hash := request.Header.Get("proxy-tls")
 
 	if scheme != "http" && scheme != "https" {
@@ -81,11 +84,16 @@ func (s *ProxyHandler) HandleTunnel(wr http.ResponseWriter, req *http.Request) {
 	request.URL.Scheme = scheme
 
 	client := &http.Client{
-		Transport: core.NewRoundTripper(hash, agent, downgrade),
+		Transport: core.NewRoundTripper(hash, setup, agent, downgrade),
 		Timeout:   10 * time.Second,
 	}
 
-	core.RemoveServiceHeaders(request)
+	var additional []string
+	if node != "" {
+		additional = append(additional, "Connection")
+	}
+
+	core.RemoveServiceHeaders(request, additional)
 
 	resp, err := client.Do(request)
 	if err != nil {

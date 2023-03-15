@@ -13,26 +13,16 @@ import (
 	utls "github.com/refraction-networking/utls"
 )
 
-const (
-	chrome  = "chrome"
-	firefox = "firefox"
-)
-
 var blacklist = []string{
 	"proxy-protocol",
+	"proxy-node-escape",
 	"proxy-downgrade",
+	"proxy-tls-setup",
 	"proxy-tls",
 }
 
-func parseUserAgent(userAgent string) string {
-	switch {
-	case strings.Contains(strings.ToLower(userAgent), "chrome"):
-		return chrome
-	case strings.Contains(strings.ToLower(userAgent), "firefox"):
-		return firefox
-	default:
-		return chrome
-	}
+func itsChrome(userAgent string) bool {
+	return strings.Contains(strings.ToLower(userAgent), "chrome")
 }
 
 func Hijack(hijackable interface{}) (net.Conn, *bufio.ReadWriter, error) {
@@ -64,7 +54,7 @@ func ReadRequest(reader *bufio.Reader, scheme string) (*http.Request, error) {
 }
 
 func StringToSpec(ja3 string, userAgent string, proto []string) (*utls.ClientHelloSpec, error) {
-	parsedUserAgent := parseUserAgent(userAgent)
+	chrome := itsChrome(userAgent)
 	extMap := genMap(proto)
 	tokens := strings.Split(ja3, ",")
 
@@ -109,7 +99,7 @@ func StringToSpec(ja3 string, userAgent string, proto []string) (*utls.ClientHel
 	// Build extensions list
 	var exts []utls.TLSExtension
 	// Optionally Add Chrome Grease Extension
-	if parsedUserAgent == chrome {
+	if chrome {
 		exts = append(exts, &utls.UtlsGREASEExtension{})
 	}
 
@@ -120,7 +110,7 @@ func StringToSpec(ja3 string, userAgent string, proto []string) (*utls.ClientHel
 		}
 
 		// Optionally add Chrome Grease Extension
-		if e == "21" && parsedUserAgent == chrome {
+		if e == "21" && chrome {
 			exts = append(exts, &utls.UtlsGREASEExtension{})
 		}
 
@@ -130,7 +120,7 @@ func StringToSpec(ja3 string, userAgent string, proto []string) (*utls.ClientHel
 	// Build CipherSuites
 	var suites []uint16
 	// Optionally Add Chrome Grease Extension
-	if parsedUserAgent == chrome {
+	if chrome {
 		suites = append(suites, utls.GREASE_PLACEHOLDER)
 	}
 
@@ -204,8 +194,10 @@ func genMap(proto []string) (extMap map[string]utls.TLSExtension) {
 	return
 }
 
-func RemoveServiceHeaders(req *http.Request) {
-	for _, key := range blacklist {
+func RemoveServiceHeaders(req *http.Request, opts []string) {
+	list := append(blacklist, opts...)
+
+	for _, key := range list {
 		if ok := req.Header.Get(key); ok == "" {
 			continue
 		}

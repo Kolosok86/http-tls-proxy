@@ -21,6 +21,7 @@ type roundTripper struct {
 	sync.Mutex
 
 	JA3       string
+	Setup     string
 	UserAgent string
 	Downgrade bool
 
@@ -86,11 +87,7 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 		host = addr
 	}
 
-	helloAgent := utls.HelloChrome_106_Shuffle
-	if rt.JA3 != "" {
-		helloAgent = utls.HelloCustom
-	}
-
+	helloAgent := rt.getClientHello(rt.Setup, rt.JA3)
 	conn := utls.UClient(rawConn, &utls.Config{
 		InsecureSkipVerify: true,
 		ServerName:         host,
@@ -98,7 +95,7 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 		helloAgent,
 	)
 
-	if err = rt.setSpec(conn); err != nil {
+	if err = rt.setSpec(conn, helloAgent); err != nil {
 		return nil, err
 	}
 
@@ -138,8 +135,8 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 	return nil, errProtocolNegotiated
 }
 
-func (rt *roundTripper) setSpec(conn *utls.UConn) error {
-	if rt.JA3 == "" {
+func (rt *roundTripper) setSpec(conn *utls.UConn, helloAgent utls.ClientHelloID) error {
+	if helloAgent.Client != "Custom" {
 		return nil
 	}
 
@@ -173,11 +170,29 @@ func (rt *roundTripper) getDialTLSAddr(req *http.Request) string {
 	return net.JoinHostPort(req.URL.Host, "443")
 }
 
-func NewRoundTripper(JA3, UserAgent string, downgrade bool) http.RoundTripper {
+func (rt *roundTripper) getClientHello(setup, ja3 string) utls.ClientHelloID {
+	switch {
+	case ja3 != "":
+		return utls.HelloCustom
+	case setup == "android":
+		return utls.HelloAndroid_11_OkHttp
+	case setup == "ios":
+		return utls.HelloIOS_14
+	case setup == "firefox":
+		return utls.HelloFirefox_105
+	case setup == "chrome":
+		return utls.HelloChrome_106_Shuffle
+	default:
+		return utls.HelloChrome_106_Shuffle
+	}
+}
+
+func NewRoundTripper(JA3, Setup, UserAgent string, downgrade bool) http.RoundTripper {
 	return &roundTripper{
 		dialer: proxy.Direct,
 
 		JA3:       JA3,
+		Setup:     Setup,
 		UserAgent: UserAgent,
 		Downgrade: downgrade,
 
