@@ -14,6 +14,8 @@
 - `proxy-tls` with ja3 token for change your tls 
 - `proxy-protocol` with `http` or `https` parameter 
 - `proxy-downgrade` use http/1.1 for request
+- `proxy-tls-setup` set values to emulate as `android` `chrome` `ios` `firefox`
+- `proxy-node-escape` remove header `Connection` from request
 
 > default is chrome browser tls, https protocol and http2 / http
 
@@ -48,6 +50,7 @@ const headers = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
   "Content-Type": "application/x-www-form-urlencoded",
+  "proxy-node-escape": "true", // value is not matter
   "proxy-tls": ja3,
 }
 
@@ -65,3 +68,5 @@ console.log(ja3 === response.data.tls.ja3)
 > I advise you to use the http(s) standard library, or the request library. It will be easier for you to set the headers you need there.
 
 > Use http scheme in request url, proxy automatically change to https, if you want `http` set header `proxy-protocol`
+
+> `proxy-tls` has priority `proxy-tls-setup`, set only one of this parameters
