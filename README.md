@@ -24,7 +24,7 @@
 Clone repository
 
 ```bash
-$ git clone https://github.com/Kolosok86/proxy.git
+$ git clone https://github.com/Kolosok86/http-tls-proxy.git
 ```
 Run with docker
 ```bash
@@ -50,7 +50,7 @@ const headers = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
   "Content-Type": "application/x-www-form-urlencoded",
-  "proxy-node-escape": "true", // value is not matter
+  "proxy-node-escape": "true", // value is doesn't matter
   "proxy-tls": ja3,
 }
 
