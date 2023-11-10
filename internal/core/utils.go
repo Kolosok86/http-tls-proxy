@@ -160,12 +160,16 @@ func genMap(proto []string) (extMap map[string]utls.TLSExtension) {
 		"16": &utls.ALPNExtension{
 			AlpnProtocols: proto,
 		},
+		"17": &utls.GenericExtension{Id: 17},
 		"18": &utls.SCTExtension{},
 		"21": &utls.UtlsPaddingExtension{GetPaddingLen: utls.BoringPaddingStyle},
+		"22": &utls.GenericExtension{Id: 22},
 		"23": &utls.UtlsExtendedMasterSecretExtension{},
 		"27": &utls.UtlsCompressCertExtension{
 			Algorithms: []utls.CertCompressionAlgo{utls.CertCompressionBrotli},
 		},
+		"28": &utls.FakeRecordSizeLimitExtension{}, //Limit: 0x4001
+		"34": &utls.GenericExtension{Id: 34},
 		"35": &utls.SessionTicketExtension{},
 		"41": &utls.GenericExtension{Id: 41},
 		"43": &utls.SupportedVersionsExtension{Versions: []uint16{
@@ -173,9 +177,12 @@ func genMap(proto []string) (extMap map[string]utls.TLSExtension) {
 			utls.VersionTLS13,
 			utls.VersionTLS12,
 		}},
+		"44": &utls.CookieExtension{},
 		"45": &utls.PSKKeyExchangeModesExtension{Modes: []uint8{
 			utls.PskModeDHE,
 		}},
+		"49": &utls.GenericExtension{Id: 49}, // post_handshake_auth
+		"50": &utls.GenericExtension{Id: 50}, // signature_algorithms_cert
 		"51": &utls.KeyShareExtension{KeyShares: []utls.KeyShare{
 			{Group: utls.CurveID(utls.GREASE_PLACEHOLDER), Data: []byte{0}},
 			{Group: utls.X25519},
