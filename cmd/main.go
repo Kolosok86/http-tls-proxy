@@ -24,14 +24,20 @@ func main() {
 		addr = flag.String("addr", ":3128", usageMsg)
 	}
 
+	flag.Parse()
+
 	logWriter := core.NewLogWriter(os.Stderr)
 	defer logWriter.Close()
 
 	logger := core.NewCondLogger(log.New(logWriter, "[PROXY] ", log.LstdFlags|log.Lshortfile), 20)
 
+	// Create proxy configuration
+	config := app.DefaultConfig()
+	config.Timeout = 10 * time.Second
+
 	server := http.Server{
 		Addr:              *addr,
-		Handler:           app.NewProxyHandler(10*time.Second, logger),
+		Handler:           app.NewProxyHandler(config, logger),
 		ErrorLog:          log.New(logWriter, "[HTTP] ", log.LstdFlags|log.Lshortfile),
 		TLSNextProto:      make(map[string]func(*http.Server, *tls.Conn, http.Handler)),
 		ReadTimeout:       0,

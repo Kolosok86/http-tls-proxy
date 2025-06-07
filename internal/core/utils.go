@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -28,7 +29,7 @@ func itsChrome(userAgent string) bool {
 func Hijack(hijackable interface{}) (net.Conn, *bufio.ReadWriter, error) {
 	hj, ok := hijackable.(http.Hijacker)
 	if !ok {
-		return nil, nil, errors.New("Connection doesn't support hijacking")
+		return nil, nil, errors.New("connection doesn't support hijacking")
 	}
 	conn, rw, err := hj.Hijack()
 	if err != nil {
@@ -58,16 +59,33 @@ func StringToSpec(ja3 string, userAgent string, proto []string) (*utls.ClientHel
 	extMap := genMap(proto)
 	tokens := strings.Split(ja3, ",")
 
-	ciphers := strings.Split(tokens[1], "-")
-	extensions := strings.Split(tokens[2], "-")
-	curves := strings.Split(tokens[3], "-")
+	// Check if we have enough tokens for a valid JA3 string
+	if len(tokens) < 5 {
+		return nil, fmt.Errorf("invalid JA3 string: expected 5 components, got %d", len(tokens))
+	}
+
+	// Safely access tokens with bounds checking
+	var ciphers, extensions, curves []string
+
+	if len(tokens) > 1 {
+		ciphers = strings.Split(tokens[1], "-")
+	}
+	if len(tokens) > 2 {
+		extensions = strings.Split(tokens[2], "-")
+	}
+	if len(tokens) > 3 {
+		curves = strings.Split(tokens[3], "-")
+	}
 	if len(curves) == 1 && curves[0] == "" {
 		curves = []string{}
 	}
 
-	pointFormats := strings.Split(tokens[4], "-")
-	if len(pointFormats) == 1 && pointFormats[0] == "" {
-		pointFormats = []string{}
+	var pointFormats []string
+	if len(tokens) > 4 {
+		pointFormats = strings.Split(tokens[4], "-")
+		if len(pointFormats) == 1 && pointFormats[0] == "" {
+			pointFormats = []string{}
+		}
 	}
 
 	// Parse Curves

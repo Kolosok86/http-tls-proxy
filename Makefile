@@ -4,11 +4,11 @@ export GO ?= go
 
 .PHONY: docker-build
 docker-build:
-	docker build -t proxy .
+	docker build -t http-tls-proxy .
 
 .PHONY: docker-run
 docker-run:
-	docker run -d --restart always --net internal --publish 3128:3128 --name proxy proxy
+	docker run -d --restart always --net internal --publish 3128:3128 --name http-tls-proxy http-tls-proxy
 
 .PHONY: run
 run:
@@ -16,11 +16,11 @@ run:
 
 .PHONY: build
 build:
-	${GO} build -o proxy ./cmd/
+	${GO} build -o http-tls-proxy ./cmd/
 
 .PHONY: clean
 clean:
-	${RM} proxy
+	${RM} http-tls-proxy
 
 .PHONY: lint
 lint:
