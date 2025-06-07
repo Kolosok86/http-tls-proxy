@@ -28,7 +28,6 @@ const (
 // Config contains the proxy configuration
 type Config struct {
 	Timeout        time.Duration
-	MaxConnections int
 	AllowedSchemes []string
 	LogLevel       int
 }
@@ -37,7 +36,6 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Timeout:        10 * time.Second,
-		MaxConnections: 1000,
 		AllowedSchemes: []string{"http", "https"},
 		LogLevel:       20,
 	}
